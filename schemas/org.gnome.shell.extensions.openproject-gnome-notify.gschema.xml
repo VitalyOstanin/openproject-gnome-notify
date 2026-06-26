@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.openproject-gnome-notify"
+          path="/org/gnome/shell/extensions/openproject-gnome-notify/">
+    <key name="host" type="s">
+      <default>""</default>
+      <summary>OpenProject base URL</summary>
+      <description>Base URL of the OpenProject instance, including any path prefix, for example https://openproject.example.com</description>
+    </key>
+    <key name="poll-interval" type="i">
+      <default>120</default>
+      <range min="30" max="3600"/>
+      <summary>Poll interval in seconds</summary>
+      <description>How often to fetch notifications, in seconds.</description>
+    </key>
+    <key name="show-banner" type="b">
+      <default>false</default>
+      <summary>Show a desktop banner on new notifications</summary>
+      <description>When enabled, a desktop banner appears for newly arrived unread notifications.</description>
+    </key>
+    <key name="max-items" type="i">
+      <default>15</default>
+      <range min="1" max="50"/>
+      <summary>Maximum notifications shown in the menu</summary>
+      <description>The number of notification rows displayed in the menu.</description>
+    </key>
+  </schema>
+</schemalist>
