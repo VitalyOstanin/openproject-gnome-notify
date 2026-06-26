@@ -13,7 +13,12 @@ export default class OpenProjectNotifyPrefs extends ExtensionPreferences {
     const page = new Adw.PreferencesPage();
     window.add(page);
 
-    const conn = new Adw.PreferencesGroup({ title: "Connection" });
+    const conn = new Adw.PreferencesGroup({
+      title: "Connection",
+      description:
+        "The API token is stored in the system keyring. After typing it, " +
+        "press Enter or the apply button to save.",
+    });
     page.add(conn);
 
     const hostRow = new Adw.EntryRow({ title: "OpenProject base URL" });
@@ -26,6 +31,10 @@ export default class OpenProjectNotifyPrefs extends ExtensionPreferences {
     const tokenRow = new Adw.PasswordEntryRow({ title: "API token" });
     tokenRow.text = getToken() ?? "";
     tokenRow.show_apply_button = true;
+    tokenRow.set_tooltip_text(
+      "Personal API token from OpenProject (My account → Access tokens). " +
+        "Press Enter or the apply button to save it to the keyring.",
+    );
     tokenRow.connect("apply", () => {
       const value = tokenRow.text;
       if (value) setToken(value);

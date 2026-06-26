@@ -12,6 +12,14 @@
   text-align: center;
 }
 
+.opn-icon-unread {
+  color: #e01b24;
+}
+
+.opn-icon-read {
+  color: #26a269;
+}
+
 .opn-subject {
   font-weight: bold;
 }

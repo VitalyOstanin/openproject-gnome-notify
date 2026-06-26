@@ -9,6 +9,7 @@ import {
   countUnread,
   newUnreadIds,
   formatTimestamp,
+  formatAbsolute,
 } from "../lib/parse.js";
 
 let failures = 0;
@@ -101,6 +102,17 @@ const sample = {
   const now = new Date("2026-06-26T13:20:00Z");
   check("time: 6 min ago", formatTimestamp("2026-06-26T13:14:21Z", now) === "6 min ago", formatTimestamp("2026-06-26T13:14:21Z", now));
   check("time: bad -> ''", formatTimestamp("bad", now) === "");
+}
+
+// formatAbsolute -----------------------------------------------------------
+{
+  const now = new Date("2026-06-26T13:20:00Z");
+  const sameYear = formatAbsolute("2026-06-26T11:05:00Z", now);
+  check("abs: same year hides year", !/\d{4}/.test(sameYear), sameYear);
+  check("abs: ends with HH:MM", /\d{2}:\d{2}$/.test(sameYear), sameYear);
+  const otherYear = formatAbsolute("2025-01-02T08:00:00Z", now);
+  check("abs: other year shows year", /2025/.test(otherYear), otherYear);
+  check("abs: bad -> ''", formatAbsolute("bad", now) === "");
 }
 
 print(`\n${total - failures}/${total} passed`);
