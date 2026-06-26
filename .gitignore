@@ -1,0 +1,8 @@
+*.zip
+*.mo
+schemas/gschemas.compiled
+docs/reviews/
+docs/superpowers/
+.DS_Store
+*.swp
+*~
