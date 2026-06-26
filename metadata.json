@@ -1,0 +1,9 @@
+{
+  "uuid": "openproject-gnome-notify@VitalyOstanin",
+  "name": "OpenProject Notifications",
+  "description": "Shows OpenProject in-app notifications in the top panel: an unread badge, a menu listing notifications with mark read/unread and open in browser, an explicit Refresh action, and an optional desktop banner on new notifications. The instance URL and API token are configured in preferences; the token is stored in the system keyring (libsecret). Works on GNOME 49-50.",
+  "shell-version": ["49", "50"],
+  "settings-schema": "org.gnome.shell.extensions.openproject-gnome-notify",
+  "url": "https://github.com/VitalyOstanin/openproject-gnome-notify",
+  "version-name": "1.0"
+}
