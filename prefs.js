@@ -30,6 +30,8 @@ export default class OpenProjectNotifyPrefs extends ExtensionPreferences {
       const value = tokenRow.text;
       if (value) setToken(value);
       else clearToken();
+      // Signal the running extension to reload the token from the keyring.
+      settings.set_int("token-revision", settings.get_int("token-revision") + 1);
     });
     conn.add(tokenRow);
 

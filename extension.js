@@ -17,6 +17,10 @@ export default class OpenProjectNotifyExtension extends Extension {
     this._settings = this.getSettings();
     this._lastUnreadIds = [];
     this._source = null;
+    this._enabled = true;
+    // The first poll seeds the unread set; do not raise banners for items that
+    // were already unread before the extension was enabled.
+    this._firstPoll = true;
 
     this._client = new OpenProjectClient(this._settings.get_string("host"));
 
@@ -43,6 +47,12 @@ export default class OpenProjectNotifyExtension extends Extension {
         this._client = new OpenProjectClient(this._settings.get_string("host"));
         this._poller.refreshNow();
       }),
+      // Preferences bump this counter after writing the token to the keyring, so
+      // the running extension reloads it without restarting.
+      this._settings.connect("changed::token-revision", () => {
+        this._client.reloadToken();
+        this._poller.refreshNow();
+      }),
     ];
 
     this._poller.start();
@@ -51,9 +61,11 @@ export default class OpenProjectNotifyExtension extends Extension {
   async _poll() {
     try {
       const notifications = await this._client.listNotifications();
+      // The await may resolve after disable(); bail out if so.
+      if (!this._enabled) return;
       this._indicator.setData(notifications, this._settings.get_int("max-items"));
 
-      if (this._settings.get_boolean("show-banner")) {
+      if (!this._firstPoll && this._settings.get_boolean("show-banner")) {
         const fresh = newUnreadIds(this._lastUnreadIds, notifications);
         if (fresh.length > 0)
           this._notify(notifications.filter((n) => fresh.includes(n.id)));
@@ -61,7 +73,9 @@ export default class OpenProjectNotifyExtension extends Extension {
       this._lastUnreadIds = notifications
         .filter((n) => !n.read)
         .map((n) => n.id);
+      this._firstPoll = false;
     } catch (e) {
+      if (!this._enabled) return;
       if (e instanceof TokenError) {
         this._indicator.setError(
           e.message === "unauthorized" ? "Invalid token" : "Set token in Settings",
@@ -92,7 +106,11 @@ export default class OpenProjectNotifyExtension extends Extension {
     const single = items.length === 1;
     const notification = new MessageTray.Notification({
       source,
-      title: single ? `#${first.wpId} ${first.wpTitle}` : `${items.length} new notifications`,
+      title: single
+        ? first.wpId
+          ? `#${first.wpId} ${first.wpTitle}`
+          : first.wpTitle
+        : `${items.length} new notifications`,
       body: single ? `${first.reason} · ${first.project}` : "",
     });
     if (single)
@@ -101,32 +119,34 @@ export default class OpenProjectNotifyExtension extends Extension {
   }
 
   _open(n) {
-    const url = buildWorkPackageUrl(this._settings.get_string("host"), n.wpId);
-    Gio.AppInfo.launch_default_for_uri(url, null);
+    if (n.wpId) {
+      const url = buildWorkPackageUrl(this._settings.get_string("host"), n.wpId);
+      Gio.AppInfo.launch_default_for_uri(url, null);
+    }
     this._client
       .markRead(n.id)
-      .then(() => this._poller.refreshNow())
+      .then(() => this._poller?.refreshNow())
       .catch((e) => logError(e, "openproject-gnome-notify: markRead failed"));
   }
 
   _toggleRead(n) {
     const p = n.read ? this._client.markUnread(n.id) : this._client.markRead(n.id);
-    p.then(() => this._poller.refreshNow()).catch((e) =>
+    p.then(() => this._poller?.refreshNow()).catch((e) =>
       logError(e, "openproject-gnome-notify: toggle failed"),
     );
   }
 
+  // Mark the unread ids from the last poll; no extra network round-trip.
   _markAllRead() {
     this._client
-      .listNotifications()
-      .then((ns) =>
-        this._client.markAllRead(ns.filter((n) => !n.read).map((n) => n.id)),
-      )
-      .then(() => this._poller.refreshNow())
+      .markAllRead(this._lastUnreadIds)
+      .then(() => this._poller?.refreshNow())
       .catch((e) => logError(e, "openproject-gnome-notify: markAllRead failed"));
   }
 
   disable() {
+    this._enabled = false;
+
     this._poller?.stop();
     this._poller = null;
 

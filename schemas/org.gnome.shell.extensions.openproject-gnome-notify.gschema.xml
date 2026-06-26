@@ -24,5 +24,10 @@
       <summary>Maximum notifications shown in the menu</summary>
       <description>The number of notification rows displayed in the menu.</description>
     </key>
+    <key name="token-revision" type="i">
+      <default>0</default>
+      <summary>Internal token change counter</summary>
+      <description>Bumped by preferences when the API token changes, so the running extension reloads it from the keyring. Not user-facing.</description>
+    </key>
   </schema>
 </schemalist>
