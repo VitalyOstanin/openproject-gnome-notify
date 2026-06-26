@@ -1,0 +1,44 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
+
+.opn-badge {
+  background-color: #e01b24;
+  color: #ffffff;
+  font-size: 0.7em;
+  font-weight: bold;
+  border-radius: 0.6em;
+  padding: 0 0.4em;
+  margin-left: 0.2em;
+  min-width: 1em;
+  text-align: center;
+}
+
+.opn-subject {
+  font-weight: bold;
+}
+
+.opn-sub {
+  font-size: 0.85em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.opn-dot {
+  min-width: 1em;
+  padding-right: 0.3em;
+}
+
+.opn-dot-unread {
+  color: #62a0ea;
+}
+
+.opn-dot-read {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.opn-icon-button {
+  padding: 0.2em;
+  border-radius: 0.3em;
+}
+
+.opn-icon-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
