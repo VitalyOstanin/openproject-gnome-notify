@@ -5,7 +5,7 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 
-import { OpenProjectClient, TokenError } from "./lib/api.js";
+import { OpenProjectClient, TokenError, NotConfiguredError } from "./lib/api.js";
 import { Poller } from "./lib/poller.js";
 import { OpenProjectIndicator } from "./lib/indicator.js";
 import { newUnreadIds, buildWorkPackageUrl } from "./lib/parse.js";
@@ -76,7 +76,10 @@ export default class OpenProjectNotifyExtension extends Extension {
       this._firstPoll = false;
     } catch (e) {
       if (!this._enabled) return;
-      if (e instanceof TokenError) {
+      if (e instanceof NotConfiguredError) {
+        // Host not configured yet: show a hint, stay quiet in the journal.
+        this._indicator.setError("Set host in Settings");
+      } else if (e instanceof TokenError) {
         this._indicator.setError(
           e.message === "unauthorized" ? "Invalid token" : "Set token in Settings",
         );
