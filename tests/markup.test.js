@@ -2,7 +2,7 @@
 //
 // Unit tests for lib/markup.js. Run: gjs -m tests/markup.test.js
 
-import { escapeMarkup, decodeEntities, htmlToBlocks, htmlToInlineMarkup } from "../lib/markup.js";
+import { escapeMarkup, decodeEntities, htmlToBlocks, htmlToInlineMarkup, metaMarkup } from "../lib/markup.js";
 
 let failures = 0;
 let total = 0;
@@ -23,6 +23,27 @@ check("decode: named", decodeEntities("a &amp; b &lt; &gt; &quot;x&quot; &#39;y&
   === "a & b < > \"x\" 'y'", decodeEntities("a &amp; b &lt; &gt; &quot;x&quot; &#39;y&#39;"));
 check("decode: numeric", decodeEntities("&#65;&#x42;") === "AB", decodeEntities("&#65;&#x42;"));
 check("decode: nbsp", decodeEntities("a&nbsp;b") === "a b");
+// Out-of-range / surrogate numeric entities must not throw (RangeError guard).
+check("decode: above max code point unchanged",
+  decodeEntities("&#x110000;") === "&#x110000;", decodeEntities("&#x110000;"));
+check("decode: surrogate unchanged",
+  decodeEntities("&#xD800;") === "&#xD800;", decodeEntities("&#xD800;"));
+check("decode: valid astral plane", decodeEntities("&#x1F600;") === "\u{1F600}");
+
+// metaMarkup -----------------------------------------------------------------
+check("meta: author only (no time)",
+  metaMarkup({ actor: "Alice" }, "70%") === "<span alpha=\"70%\">Alice</span>",
+  metaMarkup({ actor: "Alice" }, "70%"));
+check("meta: escapes author",
+  metaMarkup({ actor: "a<b>" }, "70%") === "<span alpha=\"70%\">a&lt;b&gt;</span>",
+  metaMarkup({ actor: "a<b>" }, "70%"));
+check("meta: empty -> empty", metaMarkup({}, "70%") === "");
+check("meta: alpha param honored",
+  metaMarkup({ actor: "Bob" }, "60%").includes("alpha=\"60%\""),
+  metaMarkup({ actor: "Bob" }, "60%"));
+check("meta: absolute time is bold",
+  metaMarkup({ actor: "Bob", createdAt: "2025-01-02T11:00:00Z" }, "70%").includes("<b>"),
+  metaMarkup({ actor: "Bob", createdAt: "2025-01-02T11:00:00Z" }, "70%"));
 
 // htmlToBlocks: plain paragraph ---------------------------------------------
 {
