@@ -1,9 +1,13 @@
 # OpenProject Notifications
 
 GNOME Shell extension (49–50) that shows OpenProject in-app notifications in the
-top panel: an unread badge, a menu listing notifications with mark read/unread,
-open work package in browser on click, an explicit Refresh, and an optional
-desktop banner on new notifications.
+top panel: an unread badge and a menu listing notifications. Each row is a
+fixed-height summary (title, author and time, field changes, comment); the leading
+dot toggles read/unread and a jump button opens the work package in the browser.
+Activating a row (click or arrows + Enter) opens a modal window with the full,
+formatted comment (markdown rendered from the server html — emphasis, headings,
+quotes, lists, code and clickable links). The menu also has an explicit Refresh
+and a mark-all-read action, with an optional desktop banner on new notifications.
 
 ## Install
 

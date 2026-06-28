@@ -8,6 +8,7 @@ import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 import { OpenProjectClient, TokenError, NotConfiguredError } from "./lib/api.js";
 import { Poller } from "./lib/poller.js";
 import { OpenProjectIndicator } from "./lib/indicator.js";
+import { NotificationDialog } from "./lib/dialog.js";
 import { newUnreadIds, buildWorkPackageUrl } from "./lib/parse.js";
 
 const INDICATOR_ROLE = "openproject-gnome-notify";
@@ -24,13 +25,17 @@ export default class OpenProjectNotifyExtension extends Extension {
 
     this._client = new OpenProjectClient(this._settings.get_string("host"));
 
-    this._indicator = new OpenProjectIndicator({
-      onOpen: (n) => this._open(n),
-      onToggleRead: (n) => this._toggleRead(n),
-      onMarkAllRead: () => this._markAllRead(),
-      onRefresh: () => this._poller.refreshNow(),
-      onPrefs: () => this.openPreferences(),
-    });
+    this._indicator = new OpenProjectIndicator(
+      {
+        onOpen: (n) => this._open(n),
+        onToggleRead: (n) => this._toggleRead(n),
+        onMarkAllRead: () => this._markAllRead(),
+        onRefresh: () => this._poller.refreshNow(),
+        onPrefs: () => this.openPreferences(),
+        onShowDetail: (n) => this._showDetail(n),
+      },
+      `${this.path}/icons`,
+    );
     Main.panel.addToStatusArea(INDICATOR_ROLE, this._indicator);
 
     this._poller = new Poller({
@@ -63,7 +68,10 @@ export default class OpenProjectNotifyExtension extends Extension {
       const notifications = await this._client.listNotifications();
       // The await may resolve after disable(); bail out if so.
       if (!this._enabled) return;
-      this._indicator.setData(notifications, this._settings.get_int("max-items"));
+      const maxItems = this._settings.get_int("max-items");
+      await this._enrichDetails(notifications.slice(0, maxItems));
+      if (!this._enabled) return;
+      this._indicator.setData(notifications, maxItems);
 
       if (!this._firstPoll && this._settings.get_boolean("show-banner")) {
         const fresh = newUnreadIds(this._lastUnreadIds, notifications);
@@ -86,6 +94,19 @@ export default class OpenProjectNotifyExtension extends Extension {
       } else {
         // Keep the last data and stay quiet; retry on the next tick.
         logError(e, "openproject-gnome-notify: poll failed");
+      }
+    }
+  }
+
+  // Attach comment/field-change details to the items shown in the menu. Sequential
+  // and cached in the client, so steady-state polls fetch only new activities.
+  async _enrichDetails(items) {
+    for (const n of items) {
+      if (!this._enabled || !n.activityHref) continue;
+      try {
+        n.detail = await this._client.getActivity(n.activityHref);
+      } catch (_e) {
+        n.detail = null;
       }
     }
   }
@@ -130,6 +151,41 @@ export default class OpenProjectNotifyExtension extends Extension {
       .markRead(n.id)
       .then(() => this._poller?.refreshNow())
       .catch((e) => logError(e, "openproject-gnome-notify: markRead failed"));
+  }
+
+  // Open the full-content modal for a notification. Inline links resolve against
+  // the host origin; the main button reuses _open (which also marks read).
+  _showDetail(n) {
+    // Opening a modal dialog drops the panel menu's grab, so the menu closes.
+    // Reopen it when the dialog is dismissed via Escape/Close, giving a "back to
+    // the menu" step; navigating to the browser leaves the menu closed.
+    const menu = this._indicator.menu;
+    const dialog = new NotificationDialog(n, {
+      onOpen: (item) => this._open(item),
+      openUrl: (url) => this._openUrl(url),
+      resolveHref: (href) => this._resolveHref(href),
+      onClose: () => menu.open(),
+    });
+    dialog.open();
+  }
+
+  // Scheme + authority of the configured host, to resolve root-relative hrefs
+  // (e.g. "/openproject/users/30") the comment html returns.
+  _origin() {
+    const host = this._settings.get_string("host").replace(/\/+$/, "");
+    const m = /^(https?:\/\/[^/]+)/.exec(host);
+    return m ? m[1] : "";
+  }
+
+  _resolveHref(href) {
+    if (!href) return "";
+    if (/^https?:\/\//.test(href)) return href;
+    const origin = this._origin();
+    return origin ? `${origin}${href}` : "";
+  }
+
+  _openUrl(url) {
+    if (url) Gio.AppInfo.launch_default_for_uri(url, null);
   }
 
   _toggleRead(n) {

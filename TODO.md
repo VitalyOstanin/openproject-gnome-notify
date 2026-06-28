@@ -15,3 +15,6 @@
   rest unmarked.
 - Minor (deferred): the indicator rebuilds the whole menu on every poll tick;
   fine for <= max-items rows, revisit if it ever matters.
+- Minor (deferred): the detail dialog renders a markdown subset from comment.html
+  (emphasis, headings, quotes, lists, code, links/mentions). Tables, images and
+  list nesting deeper than one level degrade to text; add them if needed.

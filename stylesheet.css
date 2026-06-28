@@ -20,13 +20,40 @@
   color: #26a269;
 }
 
+.opn-subject,
+.opn-sub,
+.opn-detail,
+.opn-comment {
+  max-width: 30em;
+}
+
 .opn-subject {
   font-weight: bold;
+}
+
+.opn-subject-read {
+  font-weight: normal;
 }
 
 .opn-sub {
   font-size: 0.85em;
   color: rgba(255, 255, 255, 0.7);
+}
+
+.opn-detail {
+  font-size: 0.85em;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.opn-comment {
+  font-size: 0.85em;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Blank leading line: a one-line gap above each row's title. */
+.opn-spacer {
+  font-size: 0.85em;
 }
 
 .opn-dot {
@@ -49,4 +76,74 @@
 
 .opn-icon-button:hover {
   background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Fixed-height menu rows: five lines (blank spacer + four content), tight spacing. */
+.opn-item-lines {
+  spacing: 1px;
+}
+
+/* Full-content modal dialog. */
+.opn-dialog-box {
+  spacing: 6px;
+  min-width: 480px;
+  max-width: 720px;
+}
+
+.opn-dialog-title {
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+.opn-dialog-meta {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9em;
+}
+
+.opn-dialog-scroll {
+  max-height: 480px;
+}
+
+.opn-dialog-content {
+  spacing: 8px;
+  padding: 6px 0;
+}
+
+.opn-dialog-change {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.opn-dialog-h1 {
+  font-weight: bold;
+  font-size: 1.3em;
+}
+
+.opn-dialog-h2 {
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+.opn-dialog-h3,
+.opn-dialog-h4,
+.opn-dialog-h5,
+.opn-dialog-h6 {
+  font-weight: bold;
+}
+
+.opn-dialog-quote {
+  border-left: 3px solid rgba(255, 255, 255, 0.3);
+  padding-left: 10px;
+  spacing: 4px;
+}
+
+.opn-dialog-list {
+  spacing: 2px;
+  padding-left: 6px;
+}
+
+.opn-dialog-code {
+  font-family: monospace;
+  background-color: rgba(0, 0, 0, 0.25);
+  padding: 6px;
+  border-radius: 0.3em;
 }

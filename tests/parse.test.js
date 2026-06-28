@@ -10,6 +10,9 @@ import {
   newUnreadIds,
   formatTimestamp,
   formatAbsolute,
+  parseActivity,
+  truncate,
+  stripMentions,
 } from "../lib/parse.js";
 
 let failures = 0;
@@ -33,6 +36,8 @@ const sample = {
         _links: {
           resource: { href: "/openproject/work_packages/14344", title: "Error" },
           project: { title: "Horizon" },
+          actor: { href: "/openproject/api/v3/users/32", title: "Jane Doe" },
+          activity: { href: "/openproject/api/v3/activities/261301" },
         },
       },
       {
@@ -60,7 +65,63 @@ const sample = {
   check("parse: wpTitle", r[0].wpTitle === "Error");
   check("parse: project", r[0].project === "Horizon");
   check("parse: createdAt", r[0].createdAt === "2026-06-26T13:14:21Z");
+  check("parse: actor", r[0].actor === "Jane Doe", r[0].actor);
+  check("parse: activityHref", r[0].activityHref === "/openproject/api/v3/activities/261301", r[0].activityHref);
+  check("parse: missing actor -> ''", r[1].actor === "");
   check("parse: read true on second", r[1].read === true);
+}
+
+// parseActivity ------------------------------------------------------------
+{
+  const act = {
+    _type: "Activity::Comment",
+    comment: { raw: "Проверено на девеле, работает" },
+    details: [{ raw: "Статус изменено с Решено на Закрыто" }, { raw: "" }],
+  };
+  const a = parseActivity(act);
+  check("activity: comment", a.comment === "Проверено на девеле, работает", a.comment);
+  check("activity: changes len 1 (drops empty)", a.changes.length === 1, a.changes.length);
+  check("activity: change text", a.changes[0] === "Статус изменено с Решено на Закрыто");
+  const empty = parseActivity(null);
+  check("activity: null -> empty", empty.comment === "" && empty.changes.length === 0);
+  const noComment = parseActivity({ details: [{ raw: "X" }] });
+  check("activity: no comment -> ''", noComment.comment === "" && noComment.changes.length === 1);
+
+  const withHtml = parseActivity({
+    comment: { raw: "hi", html: '<p class="op-uc-p">hi</p>' },
+    details: [{ raw: "x" }],
+  });
+  check("activity: commentHtml passed through",
+    withHtml.commentHtml === '<p class="op-uc-p">hi</p>', withHtml.commentHtml);
+  const noHtml = parseActivity({ comment: { raw: "hi" } });
+  check("activity: commentHtml empty when absent", noHtml.commentHtml === "", noHtml.commentHtml);
+  check("activity: commentHtml empty on empty input", parseActivity({}).commentHtml === "");
+}
+
+// stripMentions ------------------------------------------------------------
+{
+  const raw =
+    'foo <mention class="mention" data-id="30" data-type="user" ' +
+    'data-text="@Jane Doe">@Jane Doe</mention> bar';
+  check("mention: replaced by label", stripMentions(raw) === "foo @Jane Doe bar", stripMentions(raw));
+  const two =
+    '<mention data-text="@A">@A</mention> and <mention data-text="@B">@B</mention>';
+  check("mention: multiple", stripMentions(two) === "@A and @B", stripMentions(two));
+  check("mention: none unchanged", stripMentions("plain text") === "plain text");
+  check("mention: empty/null", stripMentions("") === "" && stripMentions(null) === "");
+  const inActivity = parseActivity({
+    comment: { raw: 'hi <mention data-text="@Jane Doe">@Jane Doe</mention>' },
+    details: [{ raw: 'set to <mention data-text="@Bob">@Bob</mention>' }],
+  });
+  check("mention: applied in comment", inActivity.comment === "hi @Jane Doe", inActivity.comment);
+  check("mention: applied in changes", inActivity.changes[0] === "set to @Bob", inActivity.changes[0]);
+}
+
+// truncate -----------------------------------------------------------------
+{
+  check("truncate: short unchanged", truncate("abc", 10) === "abc");
+  check("truncate: long ellipsis", truncate("abcdefghij", 5) === "abcd…", truncate("abcdefghij", 5));
+  check("truncate: empty", truncate("", 5) === "" && truncate(null, 5) === "");
 }
 
 // empty / malformed --------------------------------------------------------

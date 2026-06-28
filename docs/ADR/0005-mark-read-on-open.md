@@ -1,7 +1,8 @@
 # 5. Open marks read; a per-row toggle controls read/unread
 
 ## Status
-Accepted
+Accepted (amended by ADR 0006: the per-row toggle is now the leading dot, and
+row activation opens the detail dialog instead of the work package)
 
 ## Context
 Users want to open a work package and to control read state explicitly, including
