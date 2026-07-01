@@ -20,6 +20,35 @@
   color: #26a269;
 }
 
+/* Work-log status colours for the tasks panel icon and summary line. */
+.opn-status-green {
+  color: #2ec27e;
+}
+
+.opn-status-yellow {
+  color: #e5a50a;
+}
+
+.opn-status-red {
+  color: #e01b24;
+}
+
+.opn-timelog {
+  font-size: 0.9em;
+}
+
+.opn-timelog-green {
+  color: #2ec27e;
+}
+
+.opn-timelog-yellow {
+  color: #e5a50a;
+}
+
+.opn-timelog-red {
+  color: #e01b24;
+}
+
 .opn-subject,
 .opn-sub,
 .opn-detail,

@@ -5,11 +5,14 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 
-import { OpenProjectClient, TokenError, NotConfiguredError } from "./lib/api.js";
+import { Cli, CliError } from "./lib/cli.js";
 import { Poller } from "./lib/poller.js";
 import { OpenProjectIndicator } from "./lib/indicator.js";
+import { TasksIndicator } from "./lib/tasks-indicator.js";
 import { NotificationDialog } from "./lib/dialog.js";
-import { newUnreadIds, buildWorkPackageUrl } from "./lib/parse.js";
+import { newUnreadIds, buildWorkPackageUrl, parseActivity } from "./lib/parse.js";
+import { parseCliNotifications, parseTasks, parseTimeEntries } from "./lib/model.js";
+import { computeTimelogStatus } from "./lib/timelog.js";
 
 const INDICATOR_ROLE = "openproject-gnome-notify";
 
@@ -23,7 +26,10 @@ export default class OpenProjectNotifyExtension extends Extension {
     // were already unread before the extension was enabled.
     this._firstPoll = true;
 
-    this._client = new OpenProjectClient(this._settings.get_string("host"));
+    this._cli = new Cli();
+    this._host = "";
+    // Activities (journals) are immutable, so cache them by href.
+    this._activityCache = new Map();
 
     this._indicator = new OpenProjectIndicator(
       {
@@ -36,38 +42,58 @@ export default class OpenProjectNotifyExtension extends Extension {
       },
       `${this.path}/icons`,
     );
-    Main.panel.addToStatusArea(INDICATOR_ROLE, this._indicator);
+    Main.panel.addToStatusArea(INDICATOR_ROLE, this._indicator, 0);
+
+    this._tasksIndicator = new TasksIndicator({
+      onOpen: (t) => this._openTask(t),
+      onRefresh: () => this._poller.refreshNow(),
+      onPrefs: () => this.openPreferences(),
+    });
+    // Placed to the right of the notifications indicator.
+    Main.panel.addToStatusArea(`${INDICATOR_ROLE}-tasks`, this._tasksIndicator, 1);
 
     this._poller = new Poller({
       intervalSec: this._settings.get_int("poll-interval"),
-      onTick: () => this._poll(),
+      onTick: async () => {
+        await this._poll();
+        await this._pollTasks();
+      },
     });
 
     this._settingsIds = [
       this._settings.connect("changed::poll-interval", () =>
         this._poller.setInterval(this._settings.get_int("poll-interval")),
       ),
-      this._settings.connect("changed::host", () => {
-        this._client.destroy();
-        this._client = new OpenProjectClient(this._settings.get_string("host"));
-        this._poller.refreshNow();
-      }),
-      // Preferences bump this counter after writing the token to the keyring, so
-      // the running extension reloads it without restarting.
-      this._settings.connect("changed::token-revision", () => {
-        this._client.reloadToken();
-        this._poller.refreshNow();
-      }),
+      this._settings.connect("changed::start-date", () => this._poller.refreshNow()),
     ];
 
     this._poller.start();
   }
 
+  async _ensureHost() {
+    if (this._host) return this._host;
+    const status = await this._cli.authStatus();
+    this._host = (status && status.url) || "";
+    return this._host;
+  }
+
+  _showCliError(indicator, e) {
+    if (e instanceof CliError && e.kind === "spawn") {
+      indicator.setError("Install openproject-cli");
+    } else if (e instanceof CliError && e.kind === "auth") {
+      indicator.setError("Run: openproject-cli auth login");
+    } else {
+      logError(e, "openproject-gnome-notify: CLI call failed");
+    }
+  }
+
   async _poll() {
     try {
-      const notifications = await this._client.listNotifications();
+      await this._ensureHost();
+      const json = await this._cli.listNotifications();
       // The await may resolve after disable(); bail out if so.
       if (!this._enabled) return;
+      const notifications = parseCliNotifications(json);
       const maxItems = this._settings.get_int("max-items");
       await this._enrichDetails(notifications.slice(0, maxItems));
       if (!this._enabled) return;
@@ -84,27 +110,43 @@ export default class OpenProjectNotifyExtension extends Extension {
       this._firstPoll = false;
     } catch (e) {
       if (!this._enabled) return;
-      if (e instanceof NotConfiguredError) {
-        // Host not configured yet: show a hint, stay quiet in the journal.
-        this._indicator.setError("Set host in Settings");
-      } else if (e instanceof TokenError) {
-        this._indicator.setError(
-          e.message === "unauthorized" ? "Invalid token" : "Set token in Settings",
-        );
-      } else {
-        // Keep the last data and stay quiet; retry on the next tick.
-        logError(e, "openproject-gnome-notify: poll failed");
-      }
+      this._showCliError(this._indicator, e);
     }
   }
 
-  // Attach comment/field-change details to the items shown in the menu. Sequential
-  // and cached in the client, so steady-state polls fetch only new activities.
+  async _pollTasks() {
+    try {
+      await this._ensureHost();
+      const startDate = this._settings.get_string("start-date");
+      const [tasksJson, timeJson] = await Promise.all([
+        this._cli.listMyTasks(),
+        this._cli.listMyTime(startDate),
+      ]);
+      if (!this._enabled) return;
+      const tasks = parseTasks(tasksJson);
+      const entries = parseTimeEntries(timeJson);
+      const timelog = computeTimelogStatus(entries, startDate, new Date());
+      const maxItems = this._settings.get_int("max-items");
+      this._tasksIndicator.setData(tasks, timelog, maxItems);
+    } catch (e) {
+      if (!this._enabled) return;
+      this._showCliError(this._tasksIndicator, e);
+    }
+  }
+
+  // Attach comment/field-change details to the items shown in the menu. Cached
+  // by href because activities never change once created.
   async _enrichDetails(items) {
     for (const n of items) {
       if (!this._enabled || !n.activityHref) continue;
       try {
-        n.detail = await this._client.getActivity(n.activityHref);
+        if (this._activityCache.has(n.activityHref)) {
+          n.detail = this._activityCache.get(n.activityHref);
+          continue;
+        }
+        const json = await this._cli.getActivity(n.activityHref);
+        n.detail = parseActivity(json);
+        this._activityCache.set(n.activityHref, n.detail);
       } catch (_e) {
         n.detail = null;
       }
@@ -143,14 +185,21 @@ export default class OpenProjectNotifyExtension extends Extension {
   }
 
   _open(n) {
-    if (n.wpId) {
-      const url = buildWorkPackageUrl(this._settings.get_string("host"), n.wpId);
+    if (n.wpId && this._host) {
+      const url = buildWorkPackageUrl(this._host, n.wpId);
       Gio.AppInfo.launch_default_for_uri(url, null);
     }
-    this._client
+    this._cli
       .markRead(n.id)
       .then(() => this._poller?.refreshNow())
       .catch((e) => logError(e, "openproject-gnome-notify: markRead failed"));
+  }
+
+  _openTask(t) {
+    if (t.id && this._host) {
+      const url = buildWorkPackageUrl(this._host, t.id);
+      Gio.AppInfo.launch_default_for_uri(url, null);
+    }
   }
 
   // Open the full-content modal for a notification. Inline links resolve against
@@ -169,18 +218,11 @@ export default class OpenProjectNotifyExtension extends Extension {
     dialog.open();
   }
 
-  // Scheme + authority of the configured host, to resolve root-relative hrefs
-  // (e.g. "/openproject/users/30") the comment html returns.
-  _origin() {
-    const host = this._settings.get_string("host").replace(/\/+$/, "");
-    const m = /^(https?:\/\/[^/]+)/.exec(host);
-    return m ? m[1] : "";
-  }
-
   _resolveHref(href) {
     if (!href) return "";
     if (/^https?:\/\//.test(href)) return href;
-    const origin = this._origin();
+    const m = /^(https?:\/\/[^/]+)/.exec(this._host || "");
+    const origin = m ? m[1] : "";
     return origin ? `${origin}${href}` : "";
   }
 
@@ -189,7 +231,7 @@ export default class OpenProjectNotifyExtension extends Extension {
   }
 
   _toggleRead(n) {
-    const p = n.read ? this._client.markUnread(n.id) : this._client.markRead(n.id);
+    const p = n.read ? this._cli.markUnread(n.id) : this._cli.markRead(n.id);
     p.then(() => this._poller?.refreshNow()).catch((e) =>
       logError(e, "openproject-gnome-notify: toggle failed"),
     );
@@ -197,8 +239,7 @@ export default class OpenProjectNotifyExtension extends Extension {
 
   // Mark the unread ids from the last poll; no extra network round-trip.
   _markAllRead() {
-    this._client
-      .markAllRead(this._lastUnreadIds)
+    Promise.all(this._lastUnreadIds.map((id) => this._cli.markRead(id)))
       .then(() => this._poller?.refreshNow())
       .catch((e) => logError(e, "openproject-gnome-notify: markAllRead failed"));
   }
@@ -212,11 +253,16 @@ export default class OpenProjectNotifyExtension extends Extension {
     for (const id of this._settingsIds ?? []) this._settings.disconnect(id);
     this._settingsIds = null;
 
-    this._client?.destroy();
-    this._client = null;
+    this._cli = null;
+    this._host = "";
+    this._activityCache?.clear();
+    this._activityCache = null;
 
     this._indicator?.destroy();
     this._indicator = null;
+
+    this._tasksIndicator?.destroy();
+    this._tasksIndicator = null;
 
     this._source?.destroy();
     this._source = null;

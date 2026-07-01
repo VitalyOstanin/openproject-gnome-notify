@@ -1,20 +1,15 @@
 # TODO
 
-- Badge counts unread among the fetched page (pageSize 50), not the instance-wide
-  total. Revisit if a separate unread-count request is wanted.
-- Optional: use a bulk mark-all-read endpoint if confirmed available
-  (`POST /api/v3/notifications/read_ian`); currently mark-all iterates per id.
-- The token is read asynchronously from the keyring and cached in the client
-  (`getTokenAsync` / `reloadToken`); preferences bump `token-revision` to trigger
-  a reload. `getToken` (sync) is used only from prefs (a separate process).
-- Minor (deferred): extract magic numbers (client timeout 15 s, pageSize 50) into
-  named constants.
-- Minor (deferred): `getToken`/`getTokenAsync` return null both for "unset" and
-  for a keyring failure; the two are indistinguishable to callers.
-- Minor (deferred): `markAllRead` stops on the first failed request, leaving the
-  rest unmarked.
-- Minor (deferred): the indicator rebuilds the whole menu on every poll tick;
-  fine for <= max-items rows, revisit if it ever matters.
-- Minor (deferred): the detail dialog renders a markdown subset from comment.html
-  (emphasis, headings, quotes, lists, code, links/mentions). Tables, images and
-  list nesting deeper than one level degrade to text; add them if needed.
+- Notification instability: diagnose only if it persists after the move to
+  openproject-cli (the CLI's retry/timeout transport may already resolve it).
+- Assignee history only accumulates from first use of `wp list --include-past`;
+  tasks assigned before that are not shown. A backfill (journal scan) is out of
+  scope for now.
+- Work-log plan ignores public holidays (8h per weekday, RU production calendar
+  not applied). Revisit if the yellow/red status is misleading around holidays.
+- Daily norm (8h) and working days (Mon-Fri) are constants; make them settings
+  only if needed.
+- `markAllRead` fires per-id requests in parallel; a bulk endpoint could replace
+  it if confirmed available.
+- The tasks panel opens a work package in the browser but does not mark anything;
+  add per-row actions (status, log time) only if wanted.

@@ -2,10 +2,10 @@
 <schemalist>
   <schema id="org.gnome.shell.extensions.openproject-gnome-notify"
           path="/org/gnome/shell/extensions/openproject-gnome-notify/">
-    <key name="host" type="s">
-      <default>""</default>
-      <summary>OpenProject base URL</summary>
-      <description>Base URL of the OpenProject instance, including any path prefix, for example https://openproject.example.com</description>
+    <key name="start-date" type="s">
+      <default>"2026-06-22"</default>
+      <summary>Employment start date (YYYY-MM-DD)</summary>
+      <description>The date from which the work-log plan (8h per weekday) is accumulated.</description>
     </key>
     <key name="poll-interval" type="i">
       <default>120</default>
@@ -23,11 +23,6 @@
       <range min="1" max="50"/>
       <summary>Maximum notifications shown in the menu</summary>
       <description>The number of notification rows displayed in the menu.</description>
-    </key>
-    <key name="token-revision" type="i">
-      <default>0</default>
-      <summary>Internal token change counter</summary>
-      <description>Bumped by preferences when the API token changes, so the running extension reloads it from the keyring. Not user-facing.</description>
     </key>
   </schema>
 </schemalist>

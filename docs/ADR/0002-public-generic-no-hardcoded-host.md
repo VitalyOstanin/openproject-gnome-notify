@@ -1,7 +1,9 @@
 # 2. Public, generic extension with no hardcoded host
 
 ## Status
-Accepted
+Superseded by [0007](0007-access-via-openproject-cli.md) for the host mechanism
+(the host now comes from openproject-cli, not a GSettings key). The no-hardcoded-host
+and no-organisation-leak principle still holds.
 
 ## Context
 The extension is developed against a specific internal instance but the

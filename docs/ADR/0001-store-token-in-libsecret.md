@@ -1,7 +1,8 @@
 # 1. Store the API token in libsecret
 
 ## Status
-Accepted
+Superseded by [0007](0007-access-via-openproject-cli.md) — the extension no
+longer holds a token; credentials live in the openproject-cli configuration.
 
 ## Context
 The OpenProject API token grants full access to the account. GSettings (dconf) is
