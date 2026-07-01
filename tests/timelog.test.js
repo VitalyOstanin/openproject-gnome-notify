@@ -68,7 +68,8 @@ const start = "2026-06-29"; // Mon
   check("weekend planned=0", r.planned === 0, r.planned);
 }
 
-// Overlog on one day does not offset another day's deficit.
+// Overlog on one day does not offset another day's deficit; the reported
+// deficit is the summed per-day shortfall, not the net plan-minus-logged.
 {
   const r = computeTimelogStatus(
     [
@@ -80,6 +81,50 @@ const start = "2026-06-29"; // Mon
     now,
   );
   check("overlog does not offset -> red", r.status === "red", r.status);
+  // Mon overlogged (+8), Tue empty (-8), Wed full. Net would be 0, but the true
+  // unmet is Tue's 8h.
+  check("overlog deficit is per-day sum (8)", r.deficit === 8, r.deficit);
+}
+
+// Invalid or future start date -> zeros / green.
+{
+  const bad = computeTimelogStatus([], "not-a-date", now);
+  check("bad start -> green zeros", bad.status === "green" && bad.planned === 0 && bad.deficit === 0);
+  const future = computeTimelogStatus([], "2026-07-10", now); // after 'now'
+  check("future start -> green zeros", future.status === "green" && future.planned === 0);
+}
+
+// Multiple entries on the same day are summed.
+{
+  const r = computeTimelogStatus(
+    [
+      { spentOn: "2026-06-29", hours: 5 },
+      { spentOn: "2026-06-29", hours: 3 },
+      { spentOn: "2026-06-30", hours: 8 },
+      { spentOn: "2026-07-01", hours: 8 },
+    ],
+    start,
+    now,
+  );
+  check("same-day entries summed -> green", r.status === "green", r.status);
+  check("same-day logged=24", r.logged === 24, r.logged);
+}
+
+// Entries with a missing date or non-numeric hours are ignored, not fatal.
+{
+  const r = computeTimelogStatus(
+    [
+      { spentOn: "", hours: 8 },
+      { spentOn: "2026-06-29", hours: "oops" },
+      { spentOn: "2026-06-30", hours: 8 },
+      { spentOn: "2026-07-01", hours: 8 },
+    ],
+    start,
+    now,
+  );
+  // Mon counts 0 (non-numeric hours), so a previous day is behind -> red.
+  check("bad entries ignored, Mon behind -> red", r.status === "red", r.status);
+  check("bad entries do not inflate logged", r.logged === 16, r.logged);
 }
 
 print(`\n${total - failures}/${total} passed`);

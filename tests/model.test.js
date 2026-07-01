@@ -55,5 +55,22 @@ function check(name, cond, extra) {
   check("notif: null -> []", parseCliNotifications(null).length === 0);
 }
 
+// defensive substitutions --------------------------------------------------
+{
+  // Non-null non-array input yields an empty list, never throws.
+  check("tasks: non-array -> []", parseTasks({ id: 1 }).length === 0);
+  check("time: non-array -> []", parseTimeEntries("x").length === 0);
+  check("notif: non-array -> []", parseCliNotifications({}).length === 0);
+
+  // Missing/odd fields fall back to safe defaults.
+  const t = parseTasks([{ id: 7 }])[0];
+  check("tasks: missing subject -> ''", t.subject === "" && t.status === "" && t.updatedAt === "");
+  const e = parseTimeEntries([{ spentOn: "2026-07-01" }])[0];
+  check("time: missing hours -> 0", e.hours === 0);
+  const n = parseCliNotifications([{ id: 9, read: 1 }])[0];
+  check("notif: missing wpId -> null", n.wpId === null);
+  check("notif: truthy read -> true", n.read === true);
+}
+
 print(`\n${total - failures}/${total} passed`);
 if (failures > 0) imports.system.exit(1);
