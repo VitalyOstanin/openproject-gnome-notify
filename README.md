@@ -1,20 +1,23 @@
 # OpenProject Notifications
 
-GNOME Shell extension (49–50) with two top-panel indicators for OpenProject, both
+GNOME Shell extension (49–50): a single top-panel indicator for OpenProject,
 backed by the [openproject-cli](https://github.com/VitalyOstanin/openproject-cli)
-tool.
+tool. Its menu has two columns.
 
-- **Notifications** — an unread badge and a menu listing in-app notifications. Each
-  row is a fixed-height summary (title, author and time, field changes, comment);
-  the leading dot toggles read/unread and a jump button opens the work package in
-  the browser. Activating a row opens a modal window with the full, formatted
-  comment (markdown rendered from the server html). The menu also has Refresh and a
-  mark-all-read action, with an optional desktop banner on new notifications.
-- **My tasks and work-log** — a scrollable list of the tasks you are or were
-  assigned to (newest-updated first), and a footer summarising logged vs planned
-  hours since your start date. The plan is 8 hours per weekday (Mon–Fri). The icon
-  and summary are coloured green (all logged), yellow (only today is behind) or red
-  (an earlier day is behind).
+- **Left — notifications.** An unread badge on the panel icon and a list of in-app
+  notifications. Each row is a fixed-height summary (title, author and time, field
+  changes, comment); the leading dot toggles read/unread and a jump button opens the
+  work package in the browser. Activating a row opens a modal window with the full,
+  formatted comment (markdown rendered from the server html). Shared Refresh and
+  mark-all-read actions, with an optional desktop banner on new notifications.
+- **Right — my tasks and work-log.** A scrollable list of the tasks you are or were
+  assigned to (newest-updated first), and a summary line of logged vs planned hours
+  since your start date. The plan is 8 hours per weekday (Mon–Fri). The summary is
+  coloured green (all logged), yellow (only today is behind) or red (an earlier day
+  is behind).
+
+The **panel icon colour reflects unread notifications only** (red = unread,
+green = none); the work-log status colour is shown inside the menu, not on the icon.
 
 The extension makes no API calls of its own: everything goes through
 `openproject-cli`, run as a subprocess. Because it depends on that external

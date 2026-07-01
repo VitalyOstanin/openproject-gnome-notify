@@ -9,8 +9,10 @@ or were responsible for, and whether their logged hours keep up with an expected
 plan since joining.
 
 ## Decision
-Add a second panel indicator, to the right of the notifications one, with a
-scrollable task list on top and a fixed work-log summary footer below.
+Keep a single panel indicator with a single menu laid out in two columns:
+notifications on the left, my tasks + work-log on the right. The panel icon colour
+reflects unread notifications only; the work-log status is shown as a coloured
+summary line at the bottom of the right column, never on the icon.
 
 - Tasks: `openproject-cli wp list --assignee me --include-past`, which returns
   current plus previously-assigned work packages, newest-updated first.

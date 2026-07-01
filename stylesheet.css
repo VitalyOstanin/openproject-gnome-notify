@@ -20,21 +20,25 @@
   color: #26a269;
 }
 
-/* Work-log status colours for the tasks panel icon and summary line. */
-.opn-status-green {
-  color: #2ec27e;
+/* Two-column menu: notifications on the left, tasks + work-log on the right. */
+.opn-columns {
+  spacing: 12px;
 }
 
-.opn-status-yellow {
-  color: #e5a50a;
+.opn-column {
+  min-width: 24em;
+  spacing: 4px;
 }
 
-.opn-status-red {
-  color: #e01b24;
+.opn-col-title {
+  font-weight: bold;
+  padding: 4px 0;
 }
 
+/* Work-log summary line, coloured by status (icon colour stays notifications-only). */
 .opn-timelog {
   font-size: 0.9em;
+  padding-top: 4px;
 }
 
 .opn-timelog-green {
@@ -137,6 +141,15 @@
 }
 
 .opn-dialog-change {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.opn-dialog-field {
+  spacing: 4px;
+}
+
+.opn-dialog-field-name {
+  font-weight: bold;
   color: rgba(255, 255, 255, 0.7);
 }
 

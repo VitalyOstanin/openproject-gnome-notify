@@ -7,9 +7,9 @@ GNOME Shell extension. Conventions:
 - ESM modules; entry point `export default class … extends Extension`.
 - Pure, GNOME-free logic lives in `lib/parse.js`, `lib/timelog.js` and
   `lib/model.js` and is unit-tested under gjs (`tests/run.sh`). GNOME-coupled code
-  (`lib/cli.js`, `lib/indicator.js`, `lib/tasks-indicator.js`, `lib/poller.js`,
-  `lib/dialog.js`, `lib/markup.js`, `extension.js`, `prefs.js`) is syntax-checked
-  with `node --check` and verified at runtime.
+  (`lib/cli.js`, `lib/indicator.js`, `lib/poller.js`, `lib/dialog.js`,
+  `lib/markup.js`, `extension.js`, `prefs.js`) is syntax-checked with `node --check`
+  and verified at runtime.
 - All OpenProject access goes through the external `openproject-cli` tool, run as
   a subprocess (`lib/cli.js`). The extension stores no host or API token itself;
   both come from the CLI configuration (`openproject-cli auth login`). Because it

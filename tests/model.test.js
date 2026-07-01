@@ -72,5 +72,17 @@ function check(name, cond, extra) {
   check("notif: truthy read -> true", n.read === true);
 }
 
+// task detail fields (for the full-content dialog) --------------------------
+{
+  const r = parseTasks([
+    { id: 7, subject: "S", assignee: "Vitaly", type: "Bug", description: "d", percentageDone: 40 },
+  ])[0];
+  check("tasks: assignee carried", r.assignee === "Vitaly");
+  check("tasks: type carried", r.type === "Bug");
+  check("tasks: description carried", r.description === "d");
+  check("tasks: percentageDone carried", r.percentageDone === 40);
+  check("tasks: percentageDone null when absent", parseTasks([{ id: 8 }])[0].percentageDone === null);
+}
+
 print(`\n${total - failures}/${total} passed`);
 if (failures > 0) imports.system.exit(1);

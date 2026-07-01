@@ -8,8 +8,8 @@ import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 import { Cli, CliError } from "./lib/cli.js";
 import { Poller } from "./lib/poller.js";
 import { OpenProjectIndicator } from "./lib/indicator.js";
-import { TasksIndicator } from "./lib/tasks-indicator.js";
 import { NotificationDialog } from "./lib/dialog.js";
+import { TaskDialog } from "./lib/task-dialog.js";
 import { newUnreadIds, buildWorkPackageUrl, parseActivity } from "./lib/parse.js";
 import { parseCliNotifications, parseTasks, parseTimeEntries } from "./lib/model.js";
 import { computeTimelogStatus } from "./lib/timelog.js";
@@ -34,6 +34,8 @@ export default class OpenProjectNotifyExtension extends Extension {
     this._indicator = new OpenProjectIndicator(
       {
         onOpen: (n) => this._open(n),
+        onOpenTask: (t) => this._openTask(t),
+        onShowTask: (t) => this._showTaskDetail(t),
         onToggleRead: (n) => this._toggleRead(n),
         onMarkAllRead: () => this._markAllRead(),
         onRefresh: () => this._poller.refreshNow(),
@@ -42,15 +44,7 @@ export default class OpenProjectNotifyExtension extends Extension {
       },
       `${this.path}/icons`,
     );
-    Main.panel.addToStatusArea(INDICATOR_ROLE, this._indicator, 0);
-
-    this._tasksIndicator = new TasksIndicator({
-      onOpen: (t) => this._openTask(t),
-      onRefresh: () => this._poller.refreshNow(),
-      onPrefs: () => this.openPreferences(),
-    });
-    // Placed to the right of the notifications indicator.
-    Main.panel.addToStatusArea(`${INDICATOR_ROLE}-tasks`, this._tasksIndicator, 1);
+    Main.panel.addToStatusArea(INDICATOR_ROLE, this._indicator);
 
     this._poller = new Poller({
       intervalSec: this._settings.get_int("poll-interval"),
@@ -77,11 +71,11 @@ export default class OpenProjectNotifyExtension extends Extension {
     return this._host;
   }
 
-  _showCliError(indicator, e) {
+  _showCliError(setError, e) {
     if (e instanceof CliError && e.kind === "spawn") {
-      indicator.setError("Install openproject-cli");
+      setError("Install openproject-cli");
     } else if (e instanceof CliError && e.kind === "auth") {
-      indicator.setError("Run: openproject-cli auth login");
+      setError("Run: openproject-cli auth login");
     } else {
       logError(e, "openproject-gnome-notify: CLI call failed");
     }
@@ -97,7 +91,7 @@ export default class OpenProjectNotifyExtension extends Extension {
       const maxItems = this._settings.get_int("max-items");
       await this._enrichDetails(notifications.slice(0, maxItems));
       if (!this._enabled) return;
-      this._indicator.setData(notifications, maxItems);
+      this._indicator.setNotifications(notifications, maxItems);
 
       if (!this._firstPoll && this._settings.get_boolean("show-banner")) {
         const fresh = newUnreadIds(this._lastUnreadIds, notifications);
@@ -110,7 +104,7 @@ export default class OpenProjectNotifyExtension extends Extension {
       this._firstPoll = false;
     } catch (e) {
       if (!this._enabled) return;
-      this._showCliError(this._indicator, e);
+      this._showCliError((m) => this._indicator.setNotificationsError(m), e);
     }
   }
 
@@ -127,10 +121,10 @@ export default class OpenProjectNotifyExtension extends Extension {
       const entries = parseTimeEntries(timeJson);
       const timelog = computeTimelogStatus(entries, startDate, new Date());
       const maxItems = this._settings.get_int("max-items");
-      this._tasksIndicator.setData(tasks, timelog, maxItems);
+      this._indicator.setTasks(tasks, timelog, maxItems);
     } catch (e) {
       if (!this._enabled) return;
-      this._showCliError(this._tasksIndicator, e);
+      this._showCliError((m) => this._indicator.setTasksError(m), e);
     }
   }
 
@@ -202,6 +196,17 @@ export default class OpenProjectNotifyExtension extends Extension {
     }
   }
 
+  // Full-content modal for a task; reopens the menu when dismissed (like the
+  // notification dialog).
+  _showTaskDetail(t) {
+    const menu = this._indicator.menu;
+    const dialog = new TaskDialog(t, {
+      onOpen: (item) => this._openTask(item),
+      onClose: () => menu.open(),
+    });
+    dialog.open();
+  }
+
   // Open the full-content modal for a notification. Inline links resolve against
   // the host origin; the main button reuses _open (which also marks read).
   _showDetail(n) {
@@ -260,9 +265,6 @@ export default class OpenProjectNotifyExtension extends Extension {
 
     this._indicator?.destroy();
     this._indicator = null;
-
-    this._tasksIndicator?.destroy();
-    this._tasksIndicator = null;
 
     this._source?.destroy();
     this._source = null;
