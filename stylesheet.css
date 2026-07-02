@@ -64,6 +64,23 @@
   font-weight: bold;
 }
 
+/* Task rows tinted by workflow status; `color` cascades to both text lines. */
+.opn-task-dimmed {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.opn-task-danger {
+  color: #e01b24;
+}
+
+.opn-task-warn {
+  color: #e5a50a;
+}
+
+.opn-task-success {
+  color: #2ec27e;
+}
+
 .opn-subject-read {
   font-weight: normal;
 }
