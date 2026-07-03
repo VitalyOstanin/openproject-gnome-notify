@@ -127,5 +127,89 @@ const start = "2026-06-29"; // Mon
   check("bad entries do not inflate logged", r.logged === 16, r.logged);
 }
 
+// --- Discarding fully-filled past weeks (any position; current week kept) ---
+
+// All past weeks are fully filled -> only the current week counts toward the
+// displayed plan/fact.
+{
+  const wed15 = new Date(2026, 6, 15, 12, 0, 0); // Wed 2026-07-15
+  const start15 = "2026-06-29"; // Mon, two full weeks before the current one
+  const entries = [];
+  // Week A: Mon 06-29 .. Fri 07-03
+  for (const d of ["2026-06-29", "2026-06-30", "2026-07-01", "2026-07-02", "2026-07-03"])
+    entries.push({ spentOn: d, hours: 8 });
+  // Week B: Mon 07-06 .. Fri 07-10
+  for (const d of ["2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09", "2026-07-10"])
+    entries.push({ spentOn: d, hours: 8 });
+  // Current week: Mon 07-13, Tue 07-14, Wed 07-15 (today)
+  for (const d of ["2026-07-13", "2026-07-14", "2026-07-15"]) entries.push({ spentOn: d, hours: 8 });
+  const r = computeTimelogStatus(entries, start15, wed15);
+  check("full past weeks discarded -> planned=24", r.planned === 24, r.planned);
+  check("full past weeks discarded -> logged=24", r.logged === 24, r.logged);
+  check("all discarded/current logged -> green", r.status === "green", r.status);
+}
+
+// A past week that is not fully filled is kept (its plan/fact counted, and its
+// deficit makes the status red).
+{
+  const wed15 = new Date(2026, 6, 15, 12, 0, 0); // Wed 2026-07-15
+  const start15 = "2026-06-29";
+  const entries = [];
+  // Week A full
+  for (const d of ["2026-06-29", "2026-06-30", "2026-07-01", "2026-07-02", "2026-07-03"])
+    entries.push({ spentOn: d, hours: 8 });
+  // Week B: Tue 07-07 left at 0 -> not full (deficit 8)
+  for (const d of ["2026-07-06", "2026-07-08", "2026-07-09", "2026-07-10"])
+    entries.push({ spentOn: d, hours: 8 });
+  // Current week full so far
+  for (const d of ["2026-07-13", "2026-07-14", "2026-07-15"]) entries.push({ spentOn: d, hours: 8 });
+  const r = computeTimelogStatus(entries, start15, wed15);
+  check("kept week B + current -> planned=64", r.planned === 64, r.planned);
+  check("kept week B + current -> logged=56", r.logged === 56, r.logged);
+  check("unfilled past week -> red", r.status === "red", r.status);
+  check("deficit is the week B shortfall (8)", r.deficit === 8, r.deficit);
+}
+
+// Non-contiguous discard: full, not-full, full, current. The full middle week
+// (week C) is discarded even though it sits after the unfilled week B.
+{
+  const wed22 = new Date(2026, 6, 22, 12, 0, 0); // Wed 2026-07-22
+  const start22 = "2026-06-29";
+  const entries = [];
+  // Week A full
+  for (const d of ["2026-06-29", "2026-06-30", "2026-07-01", "2026-07-02", "2026-07-03"])
+    entries.push({ spentOn: d, hours: 8 });
+  // Week B not full: Wed 07-08 = 0
+  for (const d of ["2026-07-06", "2026-07-07", "2026-07-09", "2026-07-10"])
+    entries.push({ spentOn: d, hours: 8 });
+  // Week C full
+  for (const d of ["2026-07-13", "2026-07-14", "2026-07-15", "2026-07-16", "2026-07-17"])
+    entries.push({ spentOn: d, hours: 8 });
+  // Current week full so far
+  for (const d of ["2026-07-20", "2026-07-21", "2026-07-22"]) entries.push({ spentOn: d, hours: 8 });
+  const r = computeTimelogStatus(entries, start22, wed22);
+  check("non-contiguous: only week B + current -> planned=64", r.planned === 64, r.planned);
+  check("non-contiguous: only week B + current -> logged=56", r.logged === 56, r.logged);
+  check("non-contiguous deficit=8", r.deficit === 8, r.deficit);
+  check("non-contiguous -> red", r.status === "red", r.status);
+}
+
+// The current week, even when fully filled so far, is never discarded.
+{
+  const wed15 = new Date(2026, 6, 15, 12, 0, 0); // Wed 2026-07-15
+  const r = computeTimelogStatus(
+    [
+      { spentOn: "2026-07-13", hours: 8 },
+      { spentOn: "2026-07-14", hours: 8 },
+      { spentOn: "2026-07-15", hours: 8 },
+    ],
+    "2026-07-13", // Mon of the current week
+    wed15,
+  );
+  check("current week kept even if full -> planned=24", r.planned === 24, r.planned);
+  check("current week kept even if full -> logged=24", r.logged === 24, r.logged);
+  check("current week full -> green", r.status === "green", r.status);
+}
+
 print(`\n${total - failures}/${total} passed`);
 if (failures > 0) imports.system.exit(1);
