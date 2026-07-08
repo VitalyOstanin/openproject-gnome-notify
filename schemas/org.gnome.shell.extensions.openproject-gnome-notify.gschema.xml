@@ -19,10 +19,10 @@
       <description>When enabled, a desktop banner appears for newly arrived unread notifications.</description>
     </key>
     <key name="max-items" type="i">
-      <default>15</default>
+      <default>50</default>
       <range min="1" max="50"/>
-      <summary>Maximum notifications shown in the menu</summary>
-      <description>The number of notification rows displayed in the menu.</description>
+      <summary>Maximum rows shown in each menu column</summary>
+      <description>The number of notification and task rows displayed in each menu column.</description>
     </key>
   </schema>
 </schemalist>
